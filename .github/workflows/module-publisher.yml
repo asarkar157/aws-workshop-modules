@@ -1,0 +1,211 @@
+name: StackGen Module Publisher
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  publish-module:
+    name: Publish to ${{ matrix.target.name }}
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false  # Don't cancel other targets if one fails
+      matrix:
+        target:
+          - name: "SE Demo"          # StackGen SE demo instance
+            url_var: "STACKGEN_URL_1"
+            token_secret: "STACKGEN_TOKEN_1"
+          - name: "StackGen Instance 2"
+            url_var: "STACKGEN_URL_2"
+            token_secret: "STACKGEN_TOKEN_2"
+          # To add a new instance, just add another entry:
+          # - name: "StackGen Instance 3"
+          #   url_var: "STACKGEN_URL_3"
+          #   token_secret: "STACKGEN_TOKEN_3"
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Extract module data from release tag
+        id: extract_module_data
+        run: |
+          TAG_NAME="${{ github.event.release.tag_name }}"
+
+          # Parse tag format: <module-name>/v<semantic-version> OR <module-name>-v<semantic-version>
+          # Examples: storage_account/v1.0.0, linux_virtual_machine/v1.0.0
+          if [[ $TAG_NAME =~ ^(.+)[-/]v([0-9]+\.[0-9]+\.[0-9]+)$ ]]; then
+            MODULE_NAME="${BASH_REMATCH[1]}"
+            SEMANTIC_VERSION="${BASH_REMATCH[2]}"
+            MODULE_PATH="modules/${MODULE_NAME}"
+
+            if [ -d "$MODULE_PATH" ]; then
+              EXISTS="true"
+            else
+              echo "⚠️ Warning: Module path does not exist: $MODULE_PATH"
+              EXISTS="false"
+            fi
+
+            echo "module_name=$MODULE_NAME" >> $GITHUB_OUTPUT
+            echo "semantic_version=$SEMANTIC_VERSION" >> $GITHUB_OUTPUT
+            echo "module_path=$MODULE_PATH" >> $GITHUB_OUTPUT
+            echo "path_exists=$EXISTS" >> $GITHUB_OUTPUT
+
+            # Auto-detect cloud provider from .tf files
+            if [ "$EXISTS" = "true" ]; then
+              AWS_COUNT=$(find "$MODULE_PATH" -name "*.tf" -type f -exec grep -lE "(aws\s*=|source\s*=\s*[\"']hashicorp/aws|resource\s+[\"']aws_|data\s+[\"']aws_)" {} \; 2>/dev/null | wc -l | tr -d ' ')
+              GCP_COUNT=$(find "$MODULE_PATH" -name "*.tf" -type f -exec grep -lE "(google\s*=|source\s*=\s*[\"']hashicorp/google|resource\s+[\"']google_|data\s+[\"']google_)" {} \; 2>/dev/null | wc -l | tr -d ' ')
+              AZURE_COUNT=$(find "$MODULE_PATH" -name "*.tf" -type f -exec grep -lE "(azurerm\s*=|source\s*=\s*[\"']hashicorp/azurerm|resource\s+[\"']azurerm_|data\s+[\"']azurerm_)" {} \; 2>/dev/null | wc -l | tr -d ' ')
+
+              if [ "$AWS_COUNT" -gt "$GCP_COUNT" ] && [ "$AWS_COUNT" -gt "$AZURE_COUNT" ]; then
+                DETECTED_PROVIDER="aws"
+              elif [ "$GCP_COUNT" -gt "$AZURE_COUNT" ]; then
+                DETECTED_PROVIDER="gcp"
+              elif [ "$AZURE_COUNT" -gt 0 ]; then
+                DETECTED_PROVIDER="azure"
+              else
+                DETECTED_PROVIDER="azure"  # Default to azure for this repo
+              fi
+              echo "provider=$DETECTED_PROVIDER" >> $GITHUB_OUTPUT
+            else
+              echo "provider=azure" >> $GITHUB_OUTPUT
+            fi
+
+            echo ""
+            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+            echo "📝 Release Details (${{ matrix.target.name }}):"
+            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+            echo ""
+            echo "📌 Release Tag:       $TAG_NAME"
+            echo "📦 TF Module Name:    $MODULE_NAME"
+            echo "🔢 Semantic Version:  $SEMANTIC_VERSION"
+            echo "📁 Module Path:       $MODULE_PATH"
+            echo "✓  Path Exists:       $EXISTS"
+            echo "☁️  Provider:          $DETECTED_PROVIDER"
+            echo "   URL:               ${{ github.event.release.html_url }}"
+            echo ""
+            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          else
+            echo "❌ Error: Tag name does not match expected format"
+            echo "   Expected formats:"
+            echo "     - <module-name>/v<semantic-version> (e.g., storage_account/v1.0.0)"
+            echo "     - <module-name>-v<semantic-version> (e.g., storage_account-v1.0.0)"
+            echo "   Received: $TAG_NAME"
+            exit 1
+          fi
+
+      - name: List module contents
+        if: steps.extract_module_data.outputs.path_exists == 'true'
+        run: |
+          echo "📂 Module: ${{ steps.extract_module_data.outputs.module_path }}"
+          ls -lah "${{ steps.extract_module_data.outputs.module_path }}"
+
+      - name: Prepare upload configuration
+        if: steps.extract_module_data.outputs.path_exists == 'true'
+        id: prepare_upload
+        run: |
+          # Resolve URL and token from matrix-specified variable/secret names
+          STACKGEN_URL="${{ vars[matrix.target.url_var] }}"
+          STACKGEN_TOKEN="${{ secrets[matrix.target.token_secret] }}"
+
+          if [ -z "$STACKGEN_TOKEN" ] || [ -z "$STACKGEN_URL" ]; then
+            echo "⚠️ Skipping ${{ matrix.target.name }} — credentials not configured"
+            [ -z "$STACKGEN_TOKEN" ] && echo "   Missing secret: ${{ matrix.target.token_secret }}"
+            [ -z "$STACKGEN_URL" ]   && echo "   Missing variable: ${{ matrix.target.url_var }}"
+            echo ""
+            echo "To enable this target, add the secret/variable in:"
+            echo "   Settings → Secrets and variables → Actions"
+            echo "skip=true" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          echo "skip=false" >> $GITHUB_OUTPUT
+
+          # Provider: use repo variable override or auto-detected
+          DETECTED_PROVIDER="${{ steps.extract_module_data.outputs.provider }}"
+          if [ -n "${{ vars.STACKGEN_PROVIDER }}" ]; then
+            PROVIDER="${{ vars.STACKGEN_PROVIDER }}"
+          else
+            PROVIDER="$DETECTED_PROVIDER"
+          fi
+
+          # Auto-detect SCM type
+          SCM_REPO="${{ github.server_url }}/${{ github.repository }}"
+          if echo "$SCM_REPO" | grep -qiE "(github\.com)"; then
+            SCM_TYPE="github"
+          elif echo "$SCM_REPO" | grep -qiE "(gitlab\.com)"; then
+            SCM_TYPE="gitlab"
+          elif echo "$SCM_REPO" | grep -qiE "(dev\.azure\.com|visualstudio\.com)"; then
+            SCM_TYPE="ado"
+          elif echo "$SCM_REPO" | grep -qiE "(bitbucket\.org)"; then
+            SCM_TYPE="bitbucket"
+          else
+            SCM_TYPE="github"
+          fi
+
+          # Determine CLI image tag
+          IMAGE_TAG="${{ vars.STACKGEN_CLI_VERSION }}"
+          IMAGE_TAG="${IMAGE_TAG:-latest}"
+
+          echo "provider=$PROVIDER" >> $GITHUB_OUTPUT
+          echo "scm_type=$SCM_TYPE" >> $GITHUB_OUTPUT
+          echo "image_tag=$IMAGE_TAG" >> $GITHUB_OUTPUT
+
+          echo ""
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "📤 UPLOAD CONFIG → ${{ matrix.target.name }}"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "Provider:     $PROVIDER"
+          echo "StackGen URL: $STACKGEN_URL"
+          echo "Module Dir:   ${{ steps.extract_module_data.outputs.module_path }}"
+          echo "SCM_REPO:     $SCM_REPO"
+          echo "SCM_TAG:      ${{ github.event.release.tag_name }}"
+          echo "VERSION:      v${{ steps.extract_module_data.outputs.semantic_version }}"
+          echo "SCM_TYPE:     $SCM_TYPE"
+          echo "CLI Image:    ghcr.io/stackgenhq/stackgen:$IMAGE_TAG"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+
+      - name: Upload custom module to StackGen
+        if: steps.extract_module_data.outputs.path_exists == 'true' && steps.prepare_upload.outputs.skip != 'true'
+        env:
+          STACKGEN_PROVIDER: ${{ steps.prepare_upload.outputs.provider }}
+          SCM_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          STACKGEN_TOKEN: ${{ secrets[matrix.target.token_secret] }}
+          STACKGEN_URL: ${{ vars[matrix.target.url_var] }}
+          SCM_REPO: ${{ github.server_url }}/${{ github.repository }}
+          SCM_TAG: ${{ github.event.release.tag_name }}
+          SCM_TYPE: ${{ steps.prepare_upload.outputs.scm_type }}
+        run: |
+          DEBUG_FLAG=""
+          if [ "${{ vars.STACKGEN_DEBUG }}" = "true" ]; then
+            DEBUG_FLAG="--log 2"
+          fi
+
+          docker run --rm \
+            -v ${{ github.workspace }}:${{ github.workspace }} \
+            -w ${{ github.workspace }} \
+            -e STACKGEN_PROVIDER \
+            -e SCM_TOKEN \
+            -e STACKGEN_TOKEN \
+            -e STACKGEN_URL \
+            -e SCM_REPO \
+            -e SCM_TAG \
+            -e SCM_TYPE \
+            ghcr.io/stackgenhq/stackgen:${{ steps.prepare_upload.outputs.image_tag }} \
+            upload custom-modules \
+            --subdir ${{ steps.extract_module_data.outputs.module_path }} \
+            --name ${{ steps.extract_module_data.outputs.module_name }} \
+            --provider ${{ steps.prepare_upload.outputs.provider }} \
+            --overwrite-version \
+            --version v${{ steps.extract_module_data.outputs.semantic_version }} \
+            $DEBUG_FLAG
+
+          echo ""
+          echo "✅ Published to ${{ matrix.target.name }}"
+          echo "  • Module:   ${{ steps.extract_module_data.outputs.module_name }}"
+          echo "  • Version:  v${{ steps.extract_module_data.outputs.semantic_version }}"
+          echo "  • Provider: ${{ steps.prepare_upload.outputs.provider }}"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
