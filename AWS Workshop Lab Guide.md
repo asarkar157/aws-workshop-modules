@@ -81,12 +81,15 @@ We will now configure the module repository to automatically publish Terraform m
 Fork or access the workshop module repository:
 https://github.com/asarkar157/aws-workshop-modules
 
-In the repository, go to **Settings → Secrets and Variables → Actions**, and add the following repository secrets:
+In the repository, go to **Settings → Secrets and Variables → Actions**.
 
-| Secret Name | Value |
-|-------------|-------|
-| `STACKGEN_URL_1` | `https://sandbox.cloud.stackgen.com` |
-| `STACKGEN_TOKEN_1` | Your PAT token from Step 5 |
+1. Click on the **Variables** tab and create a new repository variable:
+   - **Name**: `STACKGEN_URL_1`
+   - **Value**: `https://sandbox.cloud.stackgen.com`
+
+2. Click on the **Secrets** tab and create a new repository secret:
+   - **Name**: `STACKGEN_TOKEN_1`
+   - **Value**: Your PAT token from Step 5
 
 ## Step 7: Run the Backfill Action to Populate All Modules
 
