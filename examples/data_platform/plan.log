@@ -1,0 +1,342 @@
+
+Terraform used the selected providers to generate the following execution
+plan. Resource actions are indicated with the following symbols:
+  [32m+[0m create[0m
+
+Terraform will perform the following actions:
+
+[1m  # module.components.random_password.db_password[0m will be created
+[0m  [32m+[0m[0m resource "random_password" "db_password" {
+      [32m+[0m[0m bcrypt_hash      = (sensitive value)
+      [32m+[0m[0m id               = (known after apply)
+      [32m+[0m[0m length           = 16
+      [32m+[0m[0m lower            = true
+      [32m+[0m[0m min_lower        = 0
+      [32m+[0m[0m min_numeric      = 0
+      [32m+[0m[0m min_special      = 0
+      [32m+[0m[0m min_upper        = 0
+      [32m+[0m[0m number           = true
+      [32m+[0m[0m numeric          = true
+      [32m+[0m[0m override_special = "!#$%&*()-_=+[]{}<>:?"
+      [32m+[0m[0m result           = (sensitive value)
+      [32m+[0m[0m special          = true
+      [32m+[0m[0m upper            = true
+    }
+
+[1m  # module.components.random_string.suffix[0m will be created
+[0m  [32m+[0m[0m resource "random_string" "suffix" {
+      [32m+[0m[0m id          = (known after apply)
+      [32m+[0m[0m length      = 6
+      [32m+[0m[0m lower       = true
+      [32m+[0m[0m min_lower   = 0
+      [32m+[0m[0m min_numeric = 0
+      [32m+[0m[0m min_special = 0
+      [32m+[0m[0m min_upper   = 0
+      [32m+[0m[0m number      = true
+      [32m+[0m[0m numeric     = true
+      [32m+[0m[0m result      = (known after apply)
+      [32m+[0m[0m special     = false
+      [32m+[0m[0m upper       = false
+    }
+
+[1m  # module.components.module.dynamodb_table.aws_dynamodb_table.this[0m will be created
+[0m  [32m+[0m[0m resource "aws_dynamodb_table" "this" {
+      [32m+[0m[0m arn              = (known after apply)
+      [32m+[0m[0m billing_mode     = "PAY_PER_REQUEST"
+      [32m+[0m[0m hash_key         = "id"
+      [32m+[0m[0m id               = (known after apply)
+      [32m+[0m[0m name             = (known after apply)
+      [32m+[0m[0m read_capacity    = (known after apply)
+      [32m+[0m[0m stream_arn       = (known after apply)
+      [32m+[0m[0m stream_label     = (known after apply)
+      [32m+[0m[0m stream_view_type = (known after apply)
+      [32m+[0m[0m tags             = (known after apply)
+      [32m+[0m[0m tags_all         = (known after apply)
+      [32m+[0m[0m write_capacity   = (known after apply)
+
+      [32m+[0m[0m attribute {
+          [32m+[0m[0m name = "id"
+          [32m+[0m[0m type = "S"
+        }
+
+      [32m+[0m[0m point_in_time_recovery (known after apply)
+
+      [32m+[0m[0m server_side_encryption (known after apply)
+
+      [32m+[0m[0m ttl (known after apply)
+    }
+
+[1m  # module.components.module.rds_instance.aws_db_instance.this[0m will be created
+[0m  [32m+[0m[0m resource "aws_db_instance" "this" {
+      [32m+[0m[0m address                               = (known after apply)
+      [32m+[0m[0m allocated_storage                     = 50
+      [32m+[0m[0m apply_immediately                     = false
+      [32m+[0m[0m arn                                   = (known after apply)
+      [32m+[0m[0m auto_minor_version_upgrade            = true
+      [32m+[0m[0m availability_zone                     = (known after apply)
+      [32m+[0m[0m backup_retention_period               = (known after apply)
+      [32m+[0m[0m backup_target                         = (known after apply)
+      [32m+[0m[0m backup_window                         = (known after apply)
+      [32m+[0m[0m ca_cert_identifier                    = (known after apply)
+      [32m+[0m[0m character_set_name                    = (known after apply)
+      [32m+[0m[0m copy_tags_to_snapshot                 = false
+      [32m+[0m[0m database_insights_mode                = (known after apply)
+      [32m+[0m[0m db_name                               = "workshopdb"
+      [32m+[0m[0m db_subnet_group_name                  = (known after apply)
+      [32m+[0m[0m dedicated_log_volume                  = false
+      [32m+[0m[0m delete_automated_backups              = true
+      [32m+[0m[0m domain_fqdn                           = (known after apply)
+      [32m+[0m[0m endpoint                              = (known after apply)
+      [32m+[0m[0m engine                                = "postgres"
+      [32m+[0m[0m engine_lifecycle_support              = (known after apply)
+      [32m+[0m[0m engine_version                        = "15.4"
+      [32m+[0m[0m engine_version_actual                 = (known after apply)
+      [32m+[0m[0m hosted_zone_id                        = (known after apply)
+      [32m+[0m[0m id                                    = (known after apply)
+      [32m+[0m[0m identifier                            = (known after apply)
+      [32m+[0m[0m identifier_prefix                     = (known after apply)
+      [32m+[0m[0m instance_class                        = "db.t3.small"
+      [32m+[0m[0m iops                                  = (known after apply)
+      [32m+[0m[0m kms_key_id                            = (known after apply)
+      [32m+[0m[0m latest_restorable_time                = (known after apply)
+      [32m+[0m[0m license_model                         = (known after apply)
+      [32m+[0m[0m listener_endpoint                     = (known after apply)
+      [32m+[0m[0m maintenance_window                    = (known after apply)
+      [32m+[0m[0m master_user_secret                    = (known after apply)
+      [32m+[0m[0m master_user_secret_kms_key_id         = (known after apply)
+      [32m+[0m[0m monitoring_interval                   = 0
+      [32m+[0m[0m monitoring_role_arn                   = (known after apply)
+      [32m+[0m[0m multi_az                              = (known after apply)
+      [32m+[0m[0m nchar_character_set_name              = (known after apply)
+      [32m+[0m[0m network_type                          = (known after apply)
+      [32m+[0m[0m option_group_name                     = (known after apply)
+      [32m+[0m[0m parameter_group_name                  = (known after apply)
+      [32m+[0m[0m password                              = (sensitive value)
+      [32m+[0m[0m performance_insights_enabled          = false
+      [32m+[0m[0m performance_insights_kms_key_id       = (known after apply)
+      [32m+[0m[0m performance_insights_retention_period = (known after apply)
+      [32m+[0m[0m port                                  = (known after apply)
+      [32m+[0m[0m publicly_accessible                   = false
+      [32m+[0m[0m replica_mode                          = (known after apply)
+      [32m+[0m[0m replicas                              = (known after apply)
+      [32m+[0m[0m resource_id                           = (known after apply)
+      [32m+[0m[0m skip_final_snapshot                   = true
+      [32m+[0m[0m snapshot_identifier                   = (known after apply)
+      [32m+[0m[0m status                                = (known after apply)
+      [32m+[0m[0m storage_throughput                    = (known after apply)
+      [32m+[0m[0m storage_type                          = (known after apply)
+      [32m+[0m[0m tags                                  = (known after apply)
+      [32m+[0m[0m tags_all                              = (known after apply)
+      [32m+[0m[0m timezone                              = (known after apply)
+      [32m+[0m[0m username                              = "dbadmin"
+      [32m+[0m[0m vpc_security_group_ids                = (known after apply)
+    }
+
+[1m  # module.components.module.rds_instance.aws_db_subnet_group.this[0m will be created
+[0m  [32m+[0m[0m resource "aws_db_subnet_group" "this" {
+      [32m+[0m[0m arn                     = (known after apply)
+      [32m+[0m[0m description             = "Managed by Terraform"
+      [32m+[0m[0m id                      = (known after apply)
+      [32m+[0m[0m name                    = (known after apply)
+      [32m+[0m[0m name_prefix             = (known after apply)
+      [32m+[0m[0m subnet_ids              = [
+          [32m+[0m[0m "subnet-05692a741356121e1",
+          [32m+[0m[0m "subnet-088494c2ee6e8cdd9",
+        ]
+      [32m+[0m[0m supported_network_types = (known after apply)
+      [32m+[0m[0m tags                    = (known after apply)
+      [32m+[0m[0m tags_all                = (known after apply)
+      [32m+[0m[0m vpc_id                  = (known after apply)
+    }
+
+[1m  # module.components.module.rds_instance.aws_security_group.this[0m will be created
+[0m  [32m+[0m[0m resource "aws_security_group" "this" {
+      [32m+[0m[0m arn                    = (known after apply)
+      [32m+[0m[0m description            = (known after apply)
+      [32m+[0m[0m egress                 = (known after apply)
+      [32m+[0m[0m id                     = (known after apply)
+      [32m+[0m[0m ingress                = [
+          [32m+[0m[0m {
+              [32m+[0m[0m cidr_blocks      = [
+                  [32m+[0m[0m "10.0.0.0/8",
+                ]
+              [32m+[0m[0m description      = "PostgreSQL"
+              [32m+[0m[0m from_port        = 5432
+              [32m+[0m[0m ipv6_cidr_blocks = []
+              [32m+[0m[0m prefix_list_ids  = []
+              [32m+[0m[0m protocol         = "tcp"
+              [32m+[0m[0m security_groups  = []
+              [32m+[0m[0m self             = false
+              [32m+[0m[0m to_port          = 5432
+            },
+        ]
+      [32m+[0m[0m name                   = (known after apply)
+      [32m+[0m[0m name_prefix            = (known after apply)
+      [32m+[0m[0m owner_id               = (known after apply)
+      [32m+[0m[0m revoke_rules_on_delete = false
+      [32m+[0m[0m tags                   = (known after apply)
+      [32m+[0m[0m tags_all               = (known after apply)
+      [32m+[0m[0m vpc_id                 = "vpc-03f132b4fde13a202"
+    }
+
+[1m  # module.components.module.s3_bucket_processed.aws_s3_bucket.this[0m will be created
+[0m  [32m+[0m[0m resource "aws_s3_bucket" "this" {
+      [32m+[0m[0m acceleration_status         = (known after apply)
+      [32m+[0m[0m acl                         = (known after apply)
+      [32m+[0m[0m arn                         = (known after apply)
+      [32m+[0m[0m bucket                      = (known after apply)
+      [32m+[0m[0m bucket_domain_name          = (known after apply)
+      [32m+[0m[0m bucket_prefix               = (known after apply)
+      [32m+[0m[0m bucket_regional_domain_name = (known after apply)
+      [32m+[0m[0m force_destroy               = false
+      [32m+[0m[0m hosted_zone_id              = (known after apply)
+      [32m+[0m[0m id                          = (known after apply)
+      [32m+[0m[0m object_lock_enabled         = (known after apply)
+      [32m+[0m[0m policy                      = (known after apply)
+      [32m+[0m[0m region                      = (known after apply)
+      [32m+[0m[0m request_payer               = (known after apply)
+      [32m+[0m[0m tags                        = (known after apply)
+      [32m+[0m[0m tags_all                    = (known after apply)
+      [32m+[0m[0m website_domain              = (known after apply)
+      [32m+[0m[0m website_endpoint            = (known after apply)
+
+      [32m+[0m[0m cors_rule (known after apply)
+
+      [32m+[0m[0m grant (known after apply)
+
+      [32m+[0m[0m lifecycle_rule (known after apply)
+
+      [32m+[0m[0m logging (known after apply)
+
+      [32m+[0m[0m object_lock_configuration (known after apply)
+
+      [32m+[0m[0m replication_configuration (known after apply)
+
+      [32m+[0m[0m server_side_encryption_configuration (known after apply)
+
+      [32m+[0m[0m versioning (known after apply)
+
+      [32m+[0m[0m website (known after apply)
+    }
+
+[1m  # module.components.module.s3_bucket_processed.aws_s3_bucket_public_access_block.this[0m will be created
+[0m  [32m+[0m[0m resource "aws_s3_bucket_public_access_block" "this" {
+      [32m+[0m[0m block_public_acls       = true
+      [32m+[0m[0m block_public_policy     = true
+      [32m+[0m[0m bucket                  = (known after apply)
+      [32m+[0m[0m id                      = (known after apply)
+      [32m+[0m[0m ignore_public_acls      = true
+      [32m+[0m[0m restrict_public_buckets = true
+    }
+
+[1m  # module.components.module.s3_bucket_processed.aws_s3_bucket_versioning.this[0][0m will be created
+[0m  [32m+[0m[0m resource "aws_s3_bucket_versioning" "this" {
+      [32m+[0m[0m bucket = (known after apply)
+      [32m+[0m[0m id     = (known after apply)
+
+      [32m+[0m[0m versioning_configuration {
+          [32m+[0m[0m mfa_delete = (known after apply)
+          [32m+[0m[0m status     = "Enabled"
+        }
+    }
+
+[1m  # module.components.module.s3_bucket_raw.aws_s3_bucket.this[0m will be created
+[0m  [32m+[0m[0m resource "aws_s3_bucket" "this" {
+      [32m+[0m[0m acceleration_status         = (known after apply)
+      [32m+[0m[0m acl                         = (known after apply)
+      [32m+[0m[0m arn                         = (known after apply)
+      [32m+[0m[0m bucket                      = (known after apply)
+      [32m+[0m[0m bucket_domain_name          = (known after apply)
+      [32m+[0m[0m bucket_prefix               = (known after apply)
+      [32m+[0m[0m bucket_regional_domain_name = (known after apply)
+      [32m+[0m[0m force_destroy               = false
+      [32m+[0m[0m hosted_zone_id              = (known after apply)
+      [32m+[0m[0m id                          = (known after apply)
+      [32m+[0m[0m object_lock_enabled         = (known after apply)
+      [32m+[0m[0m policy                      = (known after apply)
+      [32m+[0m[0m region                      = (known after apply)
+      [32m+[0m[0m request_payer               = (known after apply)
+      [32m+[0m[0m tags                        = (known after apply)
+      [32m+[0m[0m tags_all                    = (known after apply)
+      [32m+[0m[0m website_domain              = (known after apply)
+      [32m+[0m[0m website_endpoint            = (known after apply)
+
+      [32m+[0m[0m cors_rule (known after apply)
+
+      [32m+[0m[0m grant (known after apply)
+
+      [32m+[0m[0m lifecycle_rule (known after apply)
+
+      [32m+[0m[0m logging (known after apply)
+
+      [32m+[0m[0m object_lock_configuration (known after apply)
+
+      [32m+[0m[0m replication_configuration (known after apply)
+
+      [32m+[0m[0m server_side_encryption_configuration (known after apply)
+
+      [32m+[0m[0m versioning (known after apply)
+
+      [32m+[0m[0m website (known after apply)
+    }
+
+[1m  # module.components.module.s3_bucket_raw.aws_s3_bucket_public_access_block.this[0m will be created
+[0m  [32m+[0m[0m resource "aws_s3_bucket_public_access_block" "this" {
+      [32m+[0m[0m block_public_acls       = true
+      [32m+[0m[0m block_public_policy     = true
+      [32m+[0m[0m bucket                  = (known after apply)
+      [32m+[0m[0m id                      = (known after apply)
+      [32m+[0m[0m ignore_public_acls      = true
+      [32m+[0m[0m restrict_public_buckets = true
+    }
+
+[1m  # module.components.module.s3_bucket_raw.aws_s3_bucket_versioning.this[0][0m will be created
+[0m  [32m+[0m[0m resource "aws_s3_bucket_versioning" "this" {
+      [32m+[0m[0m bucket = (known after apply)
+      [32m+[0m[0m id     = (known after apply)
+
+      [32m+[0m[0m versioning_configuration {
+          [32m+[0m[0m mfa_delete = (known after apply)
+          [32m+[0m[0m status     = "Enabled"
+        }
+    }
+
+[1m  # module.components.module.secrets_manager.aws_secretsmanager_secret.this[0m will be created
+[0m  [32m+[0m[0m resource "aws_secretsmanager_secret" "this" {
+      [32m+[0m[0m arn                            = (known after apply)
+      [32m+[0m[0m description                    = "Database password for Data Platform"
+      [32m+[0m[0m force_overwrite_replica_secret = false
+      [32m+[0m[0m id                             = (known after apply)
+      [32m+[0m[0m name                           = (known after apply)
+      [32m+[0m[0m name_prefix                    = (known after apply)
+      [32m+[0m[0m policy                         = (known after apply)
+      [32m+[0m[0m recovery_window_in_days        = 30
+      [32m+[0m[0m tags                           = (known after apply)
+      [32m+[0m[0m tags_all                       = (known after apply)
+
+      [32m+[0m[0m replica (known after apply)
+    }
+
+[1m  # module.components.module.secrets_manager.aws_secretsmanager_secret_version.this[0m will be created
+[0m  [32m+[0m[0m resource "aws_secretsmanager_secret_version" "this" {
+      [32m+[0m[0m arn                  = (known after apply)
+      [32m+[0m[0m has_secret_string_wo = (known after apply)
+      [32m+[0m[0m id                   = (known after apply)
+      [32m+[0m[0m secret_id            = (known after apply)
+      [32m+[0m[0m secret_string        = (sensitive value)
+      [32m+[0m[0m version_id           = (known after apply)
+      [32m+[0m[0m version_stages       = (known after apply)
+    }
+
+[1mPlan:[0m 14 to add, 0 to change, 0 to destroy.
+[0m
+Changes to Outputs:
+  [32m+[0m[0m db_endpoint      = (known after apply)
+  [32m+[0m[0m dynamodb_table   = (known after apply)
+  [32m+[0m[0m processed_bucket = (known after apply)
+  [32m+[0m[0m raw_bucket       = (known after apply)
+[90m
+─────────────────────────────────────────────────────────────────────────────[0m
+
+Note: You didn't use the -out option to save this plan, so Terraform can't
+guarantee to take exactly these actions if you run "terraform apply" now.

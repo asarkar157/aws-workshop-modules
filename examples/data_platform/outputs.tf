@@ -1,15 +1,15 @@
 output "db_endpoint" {
-  value = module.rds_instance.db_instance_endpoint
+  value = module.components.db_endpoint
 }
 
 output "raw_bucket" {
-  value = module.s3_bucket_raw.bucket_id
+  value = module.components.raw_bucket
 }
 
 output "processed_bucket" {
-  value = module.s3_bucket_processed.bucket_id
+  value = module.components.processed_bucket
 }
 
 output "dynamodb_table" {
-  value = module.dynamodb_table.table_name
+  value = module.components.dynamodb_table
 }

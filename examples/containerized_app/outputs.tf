@@ -1,11 +1,11 @@
 output "app_url" {
-  value = module.app_runner.service_url
+  value = module.components.app_url
 }
 
 output "dynamodb_table" {
-  value = module.dynamodb_table.table_name
+  value = module.components.dynamodb_table
 }
 
 output "ecr_repository_url" {
-  value = module.ecr_repository.repository_url
+  value = module.components.ecr_repository_url
 }
