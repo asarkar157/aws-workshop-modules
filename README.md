@@ -54,12 +54,23 @@ A deployable Express/Node.js application is provided in `src/hello_world`. See [
 
 ## Quick Start
 
+Instead of using raw Terraform commands, you will use the StackGen CLI tools to import and provision your infrastructure. This ensures all your resources are tracked in the StackGen platform.
+
+1. **Import the Terraform example into a StackGen AppStack:**
 ```bash
-cd examples/classic_vm
-# Initialize terraform
-terraform init
-# Review the plan
-terraform plan
-# Apply infrastructure
-terraform apply
+terraform-importer import appstack \
+  --project <YOUR_PROJECT_ID> \
+  --input-tf-source-dir examples/classic_vm \
+  --appstack-cloud-provider aws \
+  --appstack-name "classic-vm-quickstart"
+```
+*(Note the resulting AppStack ID from the output)*
+
+2. **Provision (Plan & Apply) the AppStack:**
+```bash
+stackgen provision \
+  --appstack-id <YOUR_APPSTACK_ID> \
+  --project <YOUR_PROJECT_ID> \
+  --environment prod \
+  --apply
 ```
