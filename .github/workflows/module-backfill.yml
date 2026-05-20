@@ -77,7 +77,7 @@ jobs:
           # Enumerate from git tags (not GitHub releases).
           # Forks inherit tags but NOT releases, so git tags are the reliable source.
           # Filter to only tags matching the module version pattern: <name>-v<semver> or <name>/v<semver>
-          RELEASES_RAW=$(git tag -l | grep -E '[-/]v[0-9]+\.[0-9]+\.[0-9]+$')
+          RELEASES_RAW=$(git tag -l | grep -E '[-/]v[0-9]+\.[0-9]+\.[0-9]+$' || true)
 
           if [ -z "$RELEASES_RAW" ]; then
             echo "📭 No module tags found (expected format: <module>-v<semver>)"
