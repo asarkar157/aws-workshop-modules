@@ -1,3 +1,3 @@
-vpc_id             = "vpc-0726154e21ab7143c"
-public_subnet_id   = "subnet-0a6a9888d4b79c042"
-private_subnet_ids = ["subnet-05d3ad5f88a12b70f", "subnet-0a2f03bcefd752a95"]
+vpc_id             = "vpc-03f132b4fde13a202"
+public_subnet_id   = "subnet-03fd9e0f11cf796b8"
+private_subnet_ids = ["subnet-05692a741356121e1", "subnet-088494c2ee6e8cdd9"]
