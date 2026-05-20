@@ -36,13 +36,13 @@ jobs:
           TARGET="${{ github.event.inputs.target }}"
 
           if [ "$TARGET" = "primary" ] || [ "$TARGET" = "all" ]; then
-            if [ -z "${{ secrets.STACKGEN_TOKEN }}" ] || [ -z "${{ vars.STACKGEN_URL }}" ]; then
+            if [ -z "${{ secrets.STACKGEN_TOKEN_1 }}" ] || [ -z "${{ vars.STACKGEN_URL_1 }}" ]; then
               echo "❌ STACKGEN_TOKEN or STACKGEN_URL not configured"
               echo "   Set STACKGEN_TOKEN as a repository secret"
               echo "   Set STACKGEN_URL as a repository variable"
               exit 1
             fi
-            echo "✅ Primary instance configured: ${{ vars.STACKGEN_URL }}"
+            echo "✅ Primary instance configured: ${{ vars.STACKGEN_URL_1 }}"
           fi
 
           if [ "$TARGET" = "secondary" ] || [ "$TARGET" = "all" ]; then
@@ -61,8 +61,8 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SCM_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          STACKGEN_TOKEN: ${{ secrets.STACKGEN_TOKEN }}
-          STACKGEN_URL: ${{ vars.STACKGEN_URL }}
+          STACKGEN_TOKEN: ${{ secrets.STACKGEN_TOKEN_1 }}
+          STACKGEN_URL: ${{ vars.STACKGEN_URL_1 }}
           STACKGEN_TOKEN_2: ${{ secrets.STACKGEN_TOKEN_2 }}
           STACKGEN_URL_2: ${{ vars.STACKGEN_URL_2 }}
           STACKGEN_PROVIDER_OVERRIDE: ${{ vars.STACKGEN_PROVIDER }}

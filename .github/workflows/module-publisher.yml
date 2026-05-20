@@ -130,7 +130,7 @@ jobs:
         id: prepare_upload
         run: |
           # Verify STACKGEN_TOKEN is set
-          if [ -z "${{ secrets.STACKGEN_TOKEN }}" ]; then
+          if [ -z "${{ secrets.STACKGEN_TOKEN_1 }}" ]; then
             echo "❌ STACKGEN_TOKEN is not set"
             echo "Please set the STACKGEN_TOKEN secret in your repository settings"
             echo "You can generate a token from: https://cloud.stackgen.com/project/personal/account-settings/pat"
@@ -138,7 +138,7 @@ jobs:
           fi
           
           # Verify STACKGEN_URL is set
-          if [ -z "${{ vars.STACKGEN_URL }}" ]; then
+          if [ -z "${{ vars.STACKGEN_URL_1 }}" ]; then
             echo "❌ STACKGEN_URL is not set"
             echo "Please set the STACKGEN_URL variable in your repository settings"
             echo "Add a new repository variable named STACKGEN_URL with the base URL of your StackGen instance"
@@ -200,7 +200,7 @@ jobs:
           echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
           echo ""
           echo "Provider:     $PROVIDER"
-          echo "StackGen URL: ${{ vars.STACKGEN_URL }}"
+          echo "StackGen URL: ${{ vars.STACKGEN_URL_1 }}"
           echo "Module Dir:   ${{ steps.extract_module_data.outputs.module_path }}"
           echo "SCM_REPO:     $SCM_REPO"
           echo "SCM_TAG:      ${{ github.event.release.tag_name }}"
@@ -215,8 +215,8 @@ jobs:
         env:
           STACKGEN_PROVIDER: ${{ steps.prepare_upload.outputs.provider }}
           SCM_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          STACKGEN_TOKEN: ${{ secrets.STACKGEN_TOKEN }}
-          STACKGEN_URL: ${{ vars.STACKGEN_URL }}
+          STACKGEN_TOKEN: ${{ secrets.STACKGEN_TOKEN_1 }}
+          STACKGEN_URL: ${{ vars.STACKGEN_URL_1 }}
           SCM_REPO: ${{ github.server_url }}/${{ github.repository }}
           SCM_TAG: ${{ github.event.release.tag_name }}
           SCM_TYPE: ${{ steps.prepare_upload.outputs.scm_type }}
@@ -235,7 +235,7 @@ jobs:
           echo "  -e STACKGEN_PROVIDER=${{ steps.prepare_upload.outputs.provider }} \\"
           echo "  -e SCM_TOKEN=***MASKED*** \\"
           echo "  -e STACKGEN_TOKEN=***MASKED*** \\"
-          echo "  -e STACKGEN_URL=${{ vars.STACKGEN_URL }} \\"
+          echo "  -e STACKGEN_URL=${{ vars.STACKGEN_URL_1 }} \\"
           echo "  -e SCM_REPO=${{ github.server_url }}/${{ github.repository }} \\"
           echo "  -e SCM_TAG=${{ github.event.release.tag_name }} \\"
           echo "  -e SCM_TYPE=${{ steps.prepare_upload.outputs.scm_type }} \\"
