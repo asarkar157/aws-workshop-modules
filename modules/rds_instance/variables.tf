@@ -55,6 +55,24 @@ variable "subnet_ids" {
   description = "List of subnet IDs for the DB subnet group"
 }
 
+variable "multi_az" {
+  type        = bool
+  description = "Whether to deploy a Multi-AZ standby for automatic failover (high availability). Applies to the primary instance and all read replicas."
+  default     = false
+}
+
+variable "backup_retention_period" {
+  type        = number
+  description = "Number of days to retain automated backups. Must be greater than 0 to enable read replicas and point-in-time recovery."
+  default     = 7
+}
+
+variable "read_replica_count" {
+  type        = number
+  description = "Number of read replicas to create for read-scaling and additional high-availability endpoints. Set to 0 to disable."
+  default     = 0
+}
+
 variable "tags" {
   type        = map(string)
   description = "Tags to apply to resources"
