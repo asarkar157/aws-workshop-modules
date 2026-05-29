@@ -1,0 +1,301 @@
+name: AI Module Generator
+
+on:
+  issues:
+    types: [opened, reopened]
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
+jobs:
+  generate-module:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_wrapper: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Claude Code
+        run: npm install -g @anthropic-ai/claude-code
+
+      # ── Step 1: Classify the request ──────────────────────────────
+      - name: Classify issue request
+        id: classify
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          ISSUE_TITLE="${{ github.event.issue.title }}"
+          ISSUE_BODY=$(cat <<'ISSUE_EOF'
+          ${{ github.event.issue.body }}
+          ISSUE_EOF
+          )
+
+          EXISTING_MODULES=$(ls -1 modules/ | tr '\n' ', ')
+
+          RESULT=$(claude -p "You are classifying a GitHub issue for an AWS Terraform modules repo.
+
+          Existing modules: ${EXISTING_MODULES}
+
+          Issue title: ${ISSUE_TITLE}
+          Issue body: ${ISSUE_BODY}
+
+          Classify this issue as exactly ONE of:
+          - new_module: Requests a module that does NOT exist in the list above
+          - module_upgrade: Requests changes to an EXISTING module from the list
+          - user_error: A usage question or troubleshooting request, NOT a code change
+
+          Also determine the target module directory name (e.g. lambda_function, s3_bucket).
+          For new modules, derive from the AWS resource type without the aws_ prefix.
+
+          Respond with ONLY a JSON object, no markdown fencing:
+          {\"classification\": \"<type>\", \"module_name\": \"<name>\", \"reasoning\": \"<one sentence>\"}" --output-format text 2>/dev/null)
+
+          echo "Raw classification: $RESULT"
+
+          # Extract JSON from response
+          CLASSIFICATION=$(echo "$RESULT" | grep -o '{[^}]*}' | tail -1)
+          echo "Parsed: $CLASSIFICATION"
+
+          TYPE=$(echo "$CLASSIFICATION" | python3 -c "import sys,json; print(json.load(sys.stdin)['classification'])" 2>/dev/null || echo "new_module")
+          MODULE=$(echo "$CLASSIFICATION" | python3 -c "import sys,json; print(json.load(sys.stdin)['module_name'])" 2>/dev/null || echo "unknown")
+          REASONING=$(echo "$CLASSIFICATION" | python3 -c "import sys,json; print(json.load(sys.stdin)['reasoning'])" 2>/dev/null || echo "")
+
+          echo "classification=$TYPE" >> $GITHUB_OUTPUT
+          echo "module_name=$MODULE" >> $GITHUB_OUTPUT
+          echo "reasoning=$REASONING" >> $GITHUB_OUTPUT
+
+          echo "📋 Classification: $TYPE | Module: $MODULE | Reason: $REASONING"
+
+      # ── Step 2: Handle user_error ─────────────────────────────────
+      - name: Handle user error
+        if: steps.classify.outputs.classification == 'user_error'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          MODULE="${{ steps.classify.outputs.module_name }}"
+          REASONING="${{ steps.classify.outputs.reasoning }}"
+
+          # Build guidance pointing to relevant module
+          COMMENT="👋 Thanks for reaching out!
+
+          This looks like a usage question rather than a module change request.
+
+          **Assessment:** ${REASONING}
+
+          "
+
+          if [ -d "modules/${MODULE}" ]; then
+            COMMENT+="📖 Take a look at the [\`${MODULE}\` module](modules/${MODULE}/) for:
+          - **Variables**: [\`variables.tf\`](modules/${MODULE}/variables.tf) — all configurable inputs
+          - **Outputs**: [\`outputs.tf\`](modules/${MODULE}/outputs.tf) — values you can reference
+
+          If this doesn't resolve your issue, feel free to provide more details and we'll help further."
+          else
+            COMMENT+="Check the [Available Modules](README.md#available-modules) section for the full list of modules and their documentation."
+          fi
+
+          gh issue comment ${{ github.event.issue.number }} --body "$COMMENT"
+          echo "✅ Posted guidance comment on issue #${{ github.event.issue.number }}"
+
+      # ── Step 3: Generate / modify module code ─────────────────────
+      - name: Generate module code
+        if: steps.classify.outputs.classification != 'user_error'
+        id: generate
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          MODULE="${{ steps.classify.outputs.module_name }}"
+          TYPE="${{ steps.classify.outputs.classification }}"
+          ISSUE_TITLE="${{ github.event.issue.title }}"
+          ISSUE_BODY=$(cat <<'ISSUE_EOF'
+          ${{ github.event.issue.body }}
+          ISSUE_EOF
+          )
+
+          echo "🔨 Generating code for module: $MODULE (type: $TYPE)"
+
+          if [ "$TYPE" = "new_module" ]; then
+            PROMPT="Create a new Terraform module at modules/${MODULE}/ with main.tf, variables.tf, and outputs.tf.
+
+          Request: ${ISSUE_TITLE}
+          Details: ${ISSUE_BODY}
+
+          Follow ALL conventions from .claude/instructions.md exactly. Study the existing modules in modules/ for patterns (resource naming 'this', tags merge pattern, variable types, output descriptions). The module should be production-quality with security best practices and sensible defaults.
+
+          After creating the files, run: cd modules/${MODULE} && terraform fmt
+
+          Do NOT create any test files, examples, or README — just the three core .tf files."
+          else
+            PROMPT="Modify the existing Terraform module at modules/${MODULE}/ based on this request:
+
+          Request: ${ISSUE_TITLE}
+          Details: ${ISSUE_BODY}
+
+          Follow ALL conventions from .claude/instructions.md. Preserve backward compatibility. After changes, run: cd modules/${MODULE} && terraform fmt"
+          fi
+
+          # Run Claude Code in headless mode with filesystem access
+          claude -p "$PROMPT" --allowedTools "Bash,Read,Write,Edit" 2>&1 | tail -20
+
+          echo "module_path=modules/${MODULE}" >> $GITHUB_OUTPUT
+
+      # ── Step 4: Quality loop (validate, retry up to 3x) ──────────
+      - name: Validate module
+        if: steps.classify.outputs.classification != 'user_error'
+        id: quality
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          MODULE_PATH="${{ steps.generate.outputs.module_path }}"
+          MAX_RETRIES=3
+          PASSED=false
+
+          for attempt in $(seq 1 $MAX_RETRIES); do
+            echo "━━━ Quality check attempt $attempt/$MAX_RETRIES ━━━"
+
+            # Check if module files exist
+            if [ ! -f "${MODULE_PATH}/main.tf" ]; then
+              echo "❌ main.tf not found at ${MODULE_PATH}"
+              ERRORS="Module files not found at ${MODULE_PATH}"
+            else
+              cd "$MODULE_PATH"
+
+              # fmt check
+              FMT_OUTPUT=$(terraform fmt -check -diff 2>&1) && FMT_OK=true || FMT_OK=false
+              echo "fmt: $FMT_OK"
+
+              # init
+              INIT_OUTPUT=$(terraform init -backend=false 2>&1) && INIT_OK=true || INIT_OK=false
+              echo "init: $INIT_OK"
+
+              # validate
+              VAL_OUTPUT=$(terraform validate 2>&1) && VAL_OK=true || VAL_OK=false
+              echo "validate: $VAL_OK"
+
+              cd "$GITHUB_WORKSPACE"
+
+              if $FMT_OK && $INIT_OK && $VAL_OK; then
+                PASSED=true
+                echo "✅ All checks passed on attempt $attempt"
+                break
+              fi
+
+              ERRORS=""
+              $FMT_OK  || ERRORS+="FMT ERRORS: ${FMT_OUTPUT}\n"
+              $INIT_OK || ERRORS+="INIT ERRORS: ${INIT_OUTPUT}\n"
+              $VAL_OK  || ERRORS+="VALIDATE ERRORS: ${VAL_OUTPUT}\n"
+            fi
+
+            if [ $attempt -lt $MAX_RETRIES ]; then
+              echo "🔧 Asking Claude to fix validation errors (attempt $((attempt+1)))..."
+              claude -p "The Terraform module at ${MODULE_PATH} has validation errors. Fix them:
+
+              ${ERRORS}
+
+              Fix the issues in place. Then run: cd ${MODULE_PATH} && terraform fmt" \
+                --allowedTools "Bash,Read,Write,Edit" 2>&1 | tail -10
+            fi
+          done
+
+          echo "passed=$PASSED" >> $GITHUB_OUTPUT
+
+      # ── Step 5: Create PR ─────────────────────────────────────────
+      - name: Create Pull Request
+        if: steps.classify.outputs.classification != 'user_error' && steps.quality.outputs.passed == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          MODULE="${{ steps.classify.outputs.module_name }}"
+          TYPE="${{ steps.classify.outputs.classification }}"
+          ISSUE_NUM="${{ github.event.issue.number }}"
+          BRANCH="bot/module-${MODULE}-${ISSUE_NUM}"
+
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          git checkout -b "$BRANCH"
+          git add -A
+          git diff --cached --quiet && { echo "No changes to commit"; exit 0; }
+
+          if [ "$TYPE" = "new_module" ]; then
+            COMMIT_MSG="feat(modules): add ${MODULE} module
+
+          Resolves #${ISSUE_NUM}"
+            PR_TITLE="feat(modules): add \`${MODULE}\` module"
+            PR_BODY="## New Module: \`${MODULE}\`
+
+          Automatically generated from issue #${ISSUE_NUM}.
+
+          ### What's included
+          - \`modules/${MODULE}/main.tf\` — Resource definitions with security best practices
+          - \`modules/${MODULE}/variables.tf\` — Input variables with sensible defaults
+          - \`modules/${MODULE}/outputs.tf\` — Key resource attributes
+
+          ### Quality checks
+          - ✅ \`terraform fmt\`
+          - ✅ \`terraform init\`
+          - ✅ \`terraform validate\`
+
+          Closes #${ISSUE_NUM}"
+          else
+            COMMIT_MSG="feat(modules): update ${MODULE} module
+
+          Resolves #${ISSUE_NUM}"
+            PR_TITLE="feat(modules): update \`${MODULE}\` module"
+            PR_BODY="## Module Update: \`${MODULE}\`
+
+          Automatically generated from issue #${ISSUE_NUM}.
+
+          ### Quality checks
+          - ✅ \`terraform fmt\`
+          - ✅ \`terraform init\`
+          - ✅ \`terraform validate\`
+
+          Closes #${ISSUE_NUM}"
+          fi
+
+          git commit -m "$COMMIT_MSG"
+          git push origin "$BRANCH"
+
+          PR_URL=$(gh pr create \
+            --title "$PR_TITLE" \
+            --body "$PR_BODY" \
+            --base main \
+            --head "$BRANCH")
+
+          echo "pr_url=$PR_URL" >> $GITHUB_OUTPUT
+
+          # Comment on the original issue
+          gh issue comment "$ISSUE_NUM" --body "✅ I've analyzed your request and created a pull request with the implementation:
+
+          🔗 **${PR_URL}**
+
+          The module has been scaffolded following the repository's conventions with security best practices and sensible defaults. All quality checks (fmt, init, validate) pass.
+
+          Please review the PR and merge when ready."
+
+      # ── Step 6: Handle validation failure ─────────────────────────
+      - name: Report failure
+        if: steps.classify.outputs.classification != 'user_error' && steps.quality.outputs.passed != 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          MODULE="${{ steps.classify.outputs.module_name }}"
+          gh issue comment ${{ github.event.issue.number }} --body "⚠️ I attempted to generate the \`${MODULE}\` module but couldn't get all quality checks to pass after 3 attempts.
+
+          A maintainer will follow up manually. The partial work is available in the workflow run logs.
+
+          [View workflow run](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})"
