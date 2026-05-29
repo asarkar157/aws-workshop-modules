@@ -128,23 +128,25 @@ jobs:
           echo "🔨 Generating code for module: $MODULE (type: $TYPE)"
 
           if [ "$TYPE" = "new_module" ]; then
-            PROMPT="Create a new Terraform module at modules/${MODULE}/ with main.tf, variables.tf, and outputs.tf.
+            PROMPT="Create a new Terraform module at modules/${MODULE}/ with main.tf, variables.tf, outputs.tf, AND tests/main.tftest.hcl.
 
           Request: ${ISSUE_TITLE}
           Details: ${ISSUE_BODY}
 
           Follow ALL conventions from .claude/instructions.md exactly. Study the existing modules in modules/ for patterns (resource naming 'this', tags merge pattern, variable types, output descriptions). The module should be production-quality with security best practices and sensible defaults.
 
-          After creating the files, run: cd modules/${MODULE} && terraform fmt
+          The test file at modules/${MODULE}/tests/main.tftest.hcl MUST use mock_provider \"aws\" {}, set all required variables with realistic fake values, use command = plan, and assert that key outputs are not empty.
 
-          Do NOT create any test files, examples, or README — just the three core .tf files."
+          After creating the files, run: cd modules/${MODULE} && terraform fmt && terraform fmt tests/
+
+          Do NOT create any examples or README — just the .tf files and the test."
           else
             PROMPT="Modify the existing Terraform module at modules/${MODULE}/ based on this request:
 
           Request: ${ISSUE_TITLE}
           Details: ${ISSUE_BODY}
 
-          Follow ALL conventions from .claude/instructions.md. Preserve backward compatibility. After changes, run: cd modules/${MODULE} && terraform fmt"
+          Follow ALL conventions from .claude/instructions.md. Preserve backward compatibility. Update or create tests/main.tftest.hcl as needed. After changes, run: cd modules/${MODULE} && terraform fmt && terraform fmt tests/"
           fi
 
           # Run Claude Code in headless mode with filesystem access
@@ -185,9 +187,13 @@ jobs:
               VAL_OUTPUT=$(terraform validate 2>&1) && VAL_OK=true || VAL_OK=false
               echo "validate: $VAL_OK"
 
+              # test (mock provider — no AWS creds needed)
+              TEST_OUTPUT=$(terraform test 2>&1) && TEST_OK=true || TEST_OK=false
+              echo "test: $TEST_OK"
+
               cd "$GITHUB_WORKSPACE"
 
-              if $FMT_OK && $INIT_OK && $VAL_OK; then
+              if $FMT_OK && $INIT_OK && $VAL_OK && $TEST_OK; then
                 PASSED=true
                 echo "✅ All checks passed on attempt $attempt"
                 break
@@ -197,15 +203,16 @@ jobs:
               $FMT_OK  || ERRORS+="FMT ERRORS: ${FMT_OUTPUT}\n"
               $INIT_OK || ERRORS+="INIT ERRORS: ${INIT_OUTPUT}\n"
               $VAL_OK  || ERRORS+="VALIDATE ERRORS: ${VAL_OUTPUT}\n"
+              $TEST_OK || ERRORS+="TEST ERRORS: ${TEST_OUTPUT}\n"
             fi
 
             if [ $attempt -lt $MAX_RETRIES ]; then
-              echo "🔧 Asking Claude to fix validation errors (attempt $((attempt+1)))..."
-              claude -p "The Terraform module at ${MODULE_PATH} has validation errors. Fix them:
+              echo "🔧 Asking Claude to fix errors (attempt $((attempt+1)))..."
+              claude -p "The Terraform module at ${MODULE_PATH} has errors. Fix them:
 
               ${ERRORS}
 
-              Fix the issues in place. Then run: cd ${MODULE_PATH} && terraform fmt" \
+              Fix the issues in the module files AND the test file at ${MODULE_PATH}/tests/main.tftest.hcl. Then run: cd ${MODULE_PATH} && terraform fmt && terraform fmt tests/" \
                 --allowedTools "Bash,Read,Write,Edit" 2>&1 | tail -10
             fi
           done
@@ -243,11 +250,13 @@ jobs:
           - \`modules/${MODULE}/main.tf\` — Resource definitions with security best practices
           - \`modules/${MODULE}/variables.tf\` — Input variables with sensible defaults
           - \`modules/${MODULE}/outputs.tf\` — Key resource attributes
+          - \`modules/${MODULE}/tests/main.tftest.hcl\` — Plan test with mock provider
 
           ### Quality checks
           - ✅ \`terraform fmt\`
           - ✅ \`terraform init\`
           - ✅ \`terraform validate\`
+          - ✅ \`terraform test\` (mock provider)
 
           Closes #${ISSUE_NUM}"
           else
@@ -263,6 +272,7 @@ jobs:
           - ✅ \`terraform fmt\`
           - ✅ \`terraform init\`
           - ✅ \`terraform validate\`
+          - ✅ \`terraform test\` (mock provider)
 
           Closes #${ISSUE_NUM}"
           fi
@@ -283,7 +293,7 @@ jobs:
 
           🔗 **${PR_URL}**
 
-          The module has been scaffolded following the repository's conventions with security best practices and sensible defaults. All quality checks (fmt, init, validate) pass.
+          The module has been scaffolded following the repository's conventions with security best practices and sensible defaults. All quality checks (fmt, init, validate, test) pass.
 
           Please review the PR and merge when ready."
 
