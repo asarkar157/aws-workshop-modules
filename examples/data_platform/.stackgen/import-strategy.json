@@ -1,0 +1,24 @@
+{
+  "version": "v1",
+  "name": "local-modules-at-root-remote-modules-nested",
+  "assignments": {
+    "module.dynamodb_table": {
+      "root": true
+    },
+    "module.rds_instance": {
+      "root": true
+    },
+    "module.s3_bucket_processed": {
+      "root": true
+    },
+    "module.s3_bucket_raw": {
+      "root": true
+    },
+    "module.secrets_manager": {
+      "root": true
+    }
+  },
+  "root_backend": {
+    "env": ""
+  }
+}

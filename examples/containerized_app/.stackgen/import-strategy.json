@@ -1,0 +1,21 @@
+{
+  "version": "v1",
+  "name": "local-modules-at-root-remote-modules-nested",
+  "assignments": {
+    "module.app_runner": {
+      "root": true
+    },
+    "module.dynamodb_table": {
+      "root": true
+    },
+    "module.ecr_repository": {
+      "root": true
+    },
+    "module.secrets_manager": {
+      "root": true
+    }
+  },
+  "root_backend": {
+    "env": ""
+  }
+}

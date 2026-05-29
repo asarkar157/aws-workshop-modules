@@ -12,7 +12,7 @@ permissions:
 jobs:
   generate-module:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 20
 
     steps:
       - name: Checkout repository
@@ -162,7 +162,7 @@ jobs:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         run: |
           MODULE_PATH="${{ steps.generate.outputs.module_path }}"
-          MAX_RETRIES=3
+          MAX_RETRIES=10
           PASSED=false
 
           for attempt in $(seq 1 $MAX_RETRIES); do
@@ -304,7 +304,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           MODULE="${{ steps.classify.outputs.module_name }}"
-          gh issue comment ${{ github.event.issue.number }} --body "⚠️ I attempted to generate the \`${MODULE}\` module but couldn't get all quality checks to pass after 3 attempts.
+          gh issue comment ${{ github.event.issue.number }} --body "⚠️ I attempted to generate the \`${MODULE}\` module but couldn't get all quality checks to pass after 10 attempts.
 
           A maintainer will follow up manually. The partial work is available in the workflow run logs.
 
