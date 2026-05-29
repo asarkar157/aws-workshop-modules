@@ -12,6 +12,6 @@ jobs:
         # We use the github.event_path file which contains the complete JSON webhook payload for the event
         run: |
           curl -X POST "https://stage.dev.stackgen.com/guild/api/v1/webhooks/trigger" \
-            -H "Authorization: Bearer sg_aios_c8578cea-d405-42f0-938a-1c0f7d726868" \
+            -H "Authorization: Bearer ${{ secrets.STACKGEN_WEBHOOK_TOKEN }}" \
             -H "Content-Type: application/json" \
             -d @${{ github.event_path }}
